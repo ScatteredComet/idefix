@@ -16,12 +16,20 @@ doc/env/*
 src/version.hpp
 **/libkokkos.a
 **/KokkosCore_config.h
-build
+# ignore the build/ directory, but not any files named build (just in case)
+build/
 Makefile
 CMakeFiles
 CMakeCache.txt
 cmake_install.cmake
 Makefile.local
+
+# my additions
+cmake_packages/
+test/HD/sod/generated/**
+test/MHD/OrszagTang/generated/**
+**/git-state.txt
+# end of my additions
 
 # test artifacts
 test/**/*.o
