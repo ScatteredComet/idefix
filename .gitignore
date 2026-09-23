@@ -30,6 +30,7 @@ generated/
 **/git-state.txt
 # i think this can be tracked sometimes e.g. if you turn on generating .ipynb files in the marimo settings. for now, i have that off, so i think this is fine to ignore
 __marimo__
+compile_commands.json
 # end of my additions
 
 # test artifacts
