@@ -494,33 +494,43 @@ D_EXPAND(
         D_EXPAND(
             if (i == ibeg + pad) {
               switch (lbound[0]) {
-                case RadiationBoundaryType::dirichlet:
+                case RadiationBoundaryType::dirichlet: {
                   delta = dx1(i - 1) * nu(k, j, i) / (dx1(i) * nu(k, j, i - 1));
                   M(0, k, j, i) -= M(1, k, j, i) * delta;
                   rhs(k, j, i) -= Erad(k, j, i - 1) * M(1, k, j, i) * (1 + delta);
                   M(1, k, j, i) = 0;
                   break;
-                case RadiationBoundaryType::neumann:
+                }
+                case RadiationBoundaryType::neumann: {
                   M(0, k, j, i) += M(1, k, j, i);
                   real dx_nu = 0.5 * dx1(i - 1) / nu(k, j, i - 1) + 0.5 * dx1(i) / nu(k, j, i);
                   rhs(k, j, i) += lvalue[0] * M(1, k, j, i) * dx_nu;
                   M(1, k, j, i) = 0;
                   break;
+                }
+                default: {
+                  break;
+                }
               }
             } else if (i == iend - 1 - pad) {
               switch (rbound[0]) {
-                case RadiationBoundaryType::dirichlet:
+                case RadiationBoundaryType::dirichlet: {
                   delta = dx1(i + 1) * nu(k, j, i) / (dx1(i) * nu(k, j, i + 1));
                   M(0, k, j, i) -= M(2, k, j, i) * delta;
                   rhs(k, j, i) -= Erad(k, j, i + 1) * M(2, k, j, i) * (1 + delta);
                   M(2, k, j, i) = 0;
                   break;
-                case RadiationBoundaryType::neumann:
+                }
+                case RadiationBoundaryType::neumann: {
                   M(0, k, j, i) += M(2, k, j, i);
                   real dx_nu = 0.5 * dx1(i + 1) / nu(k, j, i + 1) + 0.5 * dx1(i) / nu(k, j, i);
                   rhs(k, j, i) += rvalue[0] * M(2, k, j, i) * dx_nu;
                   M(2, k, j, i) = 0;
                   break;
+                }
+                default: {
+                  break;
+                }
               }
             },
             if (j == jbeg + pad) {
@@ -894,6 +904,8 @@ void FluxLimitedDiffusion::FillFluxLimiter(IdefixArray4D<real> rho_kappaR,
             break;
           case LevermorePomraning1981:
             lambda(k, j, i) = RadiationFluxLimiterLevermorePomraning1981(R);
+            break;
+          default:
             break;
         }
       });
