@@ -147,3 +147,27 @@ For $R \lesssim 10^{-6}$, `1/tanh(R)` and `1/(R+1e-15)` are both $\approx R^{-1}
 *Fix:* Use the Taylor series $\lambda \approx 1/3 - R^2/45$ for $R < 0.01$.
 
 #pagebreak()
+
+== Bug 8: Long-characteristic boundary column has wrong units
+
+*File:* `src/radiation/irradiation.cpp`, `LongCharIrradiation::ComputeIrradiation`
+
+`boundaryColumn(s, k, j)` stores the column density (mass per unit area) from outside the domain to the inner radial boundary. It should be added as a constant offset to the cumulative column integral. Instead it was added to `dcol` (the volumetric mass density) before the scan:
+
+```cpp
+// Before:
+dcol(s,k,j,i) = Vc(RHO, k, j, i);
+if (rank == 0 && i == ibeg) dcol(s,k,j,i) += boundaryColumn(s, k, j);
+column_sum->ComputeColumn(dcol, s);   // integrates dcol * dr
+column(s,k,j,i) = col_result(k,j,i);
+```
+
+`ComputeColumn` integrates $\rho\, \mathrm{d}r$, so `boundaryColumn` was multiplied by the first cell's path length $\Delta r_0$ instead of being taken as-is. For a cell with $\Delta r_0 \neq 1$, every downstream cell received an incorrect column offset.
+
+*Fix:* Remove `boundaryColumn` from `dcol`; add it directly to `col_result` after the scan:
+
+```cpp
+column(s,k,j,i) = col_result(k,j,i) + boundaryColumn(s, k, j);
+```
+
+#pagebreak()

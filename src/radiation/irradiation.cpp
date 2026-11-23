@@ -264,8 +264,6 @@ void LongCharIrradiation::ComputeIrradiation() {
     idefix_for(
         "ConstructColumn", kbeg, kend, jbeg, jend, ibeg, iend, KOKKOS_LAMBDA(int k, int j, int i) {
           dcol(s, k, j, i) = Vc(RHO, k, j, i);
-
-          if (rank == 0 && i == ibeg) dcol(s, k, j, i) += boundaryColumn(s, k, j);
         });
 
     column_sum->ComputeColumn(dcol, s);
@@ -273,7 +271,7 @@ void LongCharIrradiation::ComputeIrradiation() {
 
     idefix_for(
         "SaveColumn", kbeg, kend, jbeg, jend, ibeg, iend, KOKKOS_LAMBDA(int k, int j, int i) {
-          column(s, k, j, i) = col_result(k, j, i);
+          column(s, k, j, i) = col_result(k, j, i) + boundaryColumn(s, k, j);
 
           // Save the partial column again for later
           dcol(s, k, j, i) = Vc(RHO, k, j, i) * dV(k, j, i) / (0.5 * (A(k, j, i) + A(k, j, i + 1)));
