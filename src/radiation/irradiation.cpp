@@ -300,7 +300,7 @@ void LongCharIrradiation::ComputeIrradiation() {
         for (int l = 0; l < num_bands; l++) {
           real tau = 0, dtau = 1e-300;
           for (int s = 0; s < num_spec; s++) {
-            tau += column(s, k, j, i) * kappa(s, l);
+            tau += (column(s, k, j, i) - dcol(s, k, j, i)) * kappa(s, l);
             dtau += dcol(s, k, j, i) * kappa(s, l);
           }
 
