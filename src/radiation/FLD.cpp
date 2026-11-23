@@ -979,7 +979,9 @@ void FluxLimitedDiffusion::_ComputeRadiationPressureSourceTerm(real dt, int spec
   int iend = data->end[IDIR];
 
   if (haveUserDefOpacity) {
-    data->radiation->UserOpacityFuncCGS(data, species, FLD_matrix->precond, kappaR);
+    IdefixArray3D<real> kappaP_scratch = IdefixArray3D<real>(
+        "kappaP_scratch", data->np_tot[KDIR], data->np_tot[JDIR], data->np_tot[IDIR]);
+    data->radiation->UserOpacityFuncCGS(data, species, kappaP_scratch, kappaR);
   } else {
     auto _kappaR = data->radiation->constkappaR;
     auto _kappaP = data->radiation->constkappaP;

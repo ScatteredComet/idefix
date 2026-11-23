@@ -171,3 +171,24 @@ column(s,k,j,i) = col_result(k,j,i) + boundaryColumn(s, k, j);
 ```
 
 #pagebreak()
+
+== Bug 9: Null `precond` view passed to user opacity with non-preconditioned solver
+
+*File:* `src/radiation/FLD.cpp`, `FluxLimitedDiffusion::_ComputeRadiationPressureSourceTerm`
+
+`StencilMatrix::precond` is only allocated when `enablePreconditioner()` is called, which only happens for PBICGSTAB, PCG, and PMINRES solvers. For the default BICGSTAB solver, `precond` is an empty (null) `IdefixArray3D`. The radiation-pressure routine passed it as a scratch array to the user opacity callback:
+
+```cpp
+// Before:
+data->radiation->UserOpacityFuncCGS(data, species, FLD_matrix->precond, kappaR);
+```
+
+Any write to `FLD_matrix->precond` from within the opacity function would dereference a null pointer, causing a crash or silent memory corruption.
+
+*Fix:* Allocate a local temporary array and pass that instead:
+
+```cpp
+IdefixArray3D<real> kappaP_scratch = IdefixArray3D<real>(
+    "kappaP_scratch", np_tot[KDIR], np_tot[JDIR], np_tot[IDIR]);
+data->radiation->UserOpacityFuncCGS(data, species, kappaP_scratch, kappaR);
+```
