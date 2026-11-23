@@ -296,15 +296,6 @@ void UpdateSurface(DataBlock& data, const real t, const real dt) {
   // Do dust condensation/evaporation
   ApplyCondensation(data, t, dt);
 
-  if (radiation_pressure) {
-    data.irradiation->ComputeRadiationPressureSourceTerm<DefaultPhysics, true>(data.hydro.get(), t, dt);
-    data.radiation->ComputeRadiationPressureSourceTerm<DefaultPhysics, true>(data.hydro.get(), t, dt);
-
-    for (int s=0; s < data.dust.size(); s++) {
-      data.irradiation->ComputeRadiationPressureSourceTerm<DustPhysics, true>(data.dust[s].get(), t, dt);
-      data.radiation->ComputeRadiationPressureSourceTerm<DustPhysics, true>(data.dust[s].get(), t, dt);
-    }
-  }
 }
 
 void MeanOpacity(DataBlock* data, int species,IdefixArray3D<real> kappaP, IdefixArray3D<real> kappaR) {

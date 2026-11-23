@@ -112,3 +112,15 @@ Uc(ENG, k, j, i) += Vc(VX1, k, j, i) * dp1
 guarded by `#if HAVE_ENERGY == 1`.
 
 #pagebreak()
+
+== Bug 6: Dusty-wind test applies radiation pressure twice
+
+*File:* `test/Radiation/dynamic/dusty-wind/setup.cpp`
+
+`RadiationPressureSourceTerm` is enrolled as a user source term via `EnrollUserSourceTerm`, so the time integrator already calls it every RK stage. The same function was then called again inside `UpdateSurface` (registered as `UserStepLast`), doubling the radiation-pressure kick for all species every time-step.
+
+Note: bug 4 happened to conceal the double kick on the gas (the second `update_Vc = true` kick landed in `Uc` and was then discarded by `PrimToCons`), but dust received an unambiguous double kick.
+
+*Fix:* Remove the redundant `ComputeRadiationPressureSourceTerm` block from `UpdateSurface`.
+
+#pagebreak()
