@@ -398,6 +398,7 @@ void TimeIntegrator::Cycle(DataBlock& data) {
   /////////////////////////////////////////////////
   // solve radiation
 
+  if (data.haveIrradiation || data.haveRadiation) data.SetBoundaries();
   if (data.haveIrradiation) data.irradiation->ComputeIrradiation();
   if (data.haveRadiation) data.radiation->SolveSystem();
 

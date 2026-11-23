@@ -14,3 +14,15 @@ In a full-$2\pi$ domain the axis ghost cells across the pole should be filled by
 *Fix:* Pass `rad_boundary.isTwoPi` instead of `this->isTwoPi` to `ApplyAxisBoundary`.
 
 #pagebreak()
+
+== Smaller Bug 2: Stale hydro ghost cells before radiation solve
+
+*File:* `src/timeIntegrator.cpp`, `TimeIntegrator::Cycle`
+
+The stage loop ends with `ConsToPrim`, leaving interior ghost cells at the values set at the _beginning_ of the final stage. No `SetBoundaries` is called before `ComputeIrradiation` or `SolveSystem`. As a result:
+
+- The diffusion coefficient $\nu = \lambda c / (\kappa_R \rho)$ is evaluated with ghost-cell densities and temperatures that are one stage behind. Two MPI ranks sharing a face therefore compute slightly different face coefficients, so the diffusion matrix is not exactly symmetric. This breaks CG and MINRES solvers (which rely on exact symmetry) and causes a small $O(\Delta t)$ non-conservation of radiation energy across MPI boundaries.
+
+*Fix:* Call `data.SetBoundaries()` once before the radiation solve when radiation is active.
+
+#pagebreak()
