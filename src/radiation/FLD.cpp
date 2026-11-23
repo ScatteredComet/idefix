@@ -798,7 +798,7 @@ void FluxLimitedDiffusion::EnforceBoundary(int dir, BoundarySide side, IdefixArr
 
     case RadiationBoundaryType::axis: {
       BoundaryLoopRange range{ibeg, iend, jbeg, jend, kbeg, kend};
-      ApplyAxisBoundary(data, side, range, arr, this->isTwoPi);
+      ApplyAxisBoundary(data, side, range, arr, rad_boundary.isTwoPi);
       break;
     }
 
