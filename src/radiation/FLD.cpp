@@ -784,6 +784,12 @@ void FluxLimitedDiffusion::EnforceBoundary(int dir, BoundarySide side, IdefixArr
     }
 
     case RadiationBoundaryType::neumann: {
+      real val = (side == left) ? lvalue[dir] : rvalue[dir];
+      IdefixArray3D<real> nu_arr = this->nu;
+      IdefixArray1D<real> dx_arr = data->dx[dir];
+      const int dir_ref = (dir == IDIR) ? (ighost + side * (nxi - 1))
+                        : (dir == JDIR) ? (jghost + side * (nxj - 1))
+                                        : (kghost + side * (nxk - 1));
       idefix_for(
           "BoundaryNeumann", kbeg, kend, jbeg, jend, ibeg, iend,
           KOKKOS_LAMBDA(int k, int j, int i) {
@@ -791,7 +797,8 @@ void FluxLimitedDiffusion::EnforceBoundary(int dir, BoundarySide side, IdefixArr
             const int jref = (dir == JDIR) ? jghost + side * (nxj - 1) : j;
             const int kref = (dir == KDIR) ? kghost + side * (nxk - 1) : k;
 
-            localVar(k, j, i) = localVar(kref, jref, iref);
+            localVar(k, j, i) = localVar(kref, jref, iref)
+                               - val * dx_arr(dir_ref) / nu_arr(kref, jref, iref);
           });
       break;
     }

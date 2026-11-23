@@ -26,3 +26,26 @@ The stage loop ends with `ConsToPrim`, leaving interior ghost cells at the value
 *Fix:* Call `data.SetBoundaries()` once before the radiation solve when radiation is active.
 
 #pagebreak()
+
+== Smaller Bug 3: Non-zero Neumann ghost-cell fill inconsistent with the matrix
+
+*File:* `src/radiation/FLD.cpp`, `FluxLimitedDiffusion::EnforceBoundary`
+
+The matrix enforces a Neumann boundary by folding the off-diagonal coupling into the diagonal and adding a correction
+
+$
+\text{rhs}_{i} \mathrel{+}= F \cdot M_{i,{i-1}} \cdot \Delta x_{\nu}
+$
+
+where $F$ is the specified outward flux and $\Delta x_\nu = \tfrac{1}{2}\bigl(dx_{i-1}/\nu_{i-1} + dx_i/\nu_i\bigr)$. This is equivalent to imposing $E_{\rm ghost} = E_{\rm ref} - F \cdot \Delta x_\nu$. The ghost-cell fill in `EnforceBoundary` ignored $F$ entirely and simply copied $E_{\rm ref}$, giving the wrong ghost-cell gradient for the flux limiter when $F \neq 0$.
+
+All tests use $F = 0$, where both formulas agree.
+
+*Fix:*
+```cpp
+localVar(k, j, i) = localVar(kref, jref, iref)
+                 - val * dx_arr(dir_ref) / nu_arr(kref, jref, iref);
+```
+(approximating $dx_{\rm ghost} \approx dx_{\rm ref}$ and $\nu_{\rm ghost} \approx \nu_{\rm ref}$).
+
+#pagebreak()
