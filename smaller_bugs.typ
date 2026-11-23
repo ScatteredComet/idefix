@@ -49,3 +49,23 @@ localVar(k, j, i) = localVar(kref, jref, iref)
 (approximating $dx_{\rm ghost} \approx dx_{\rm ref}$ and $\nu_{\rm ghost} \approx \nu_{\rm ref}$).
 
 #pagebreak()
+
+== Smaller Bug 4: `CYLINDRICAL` geometry silently uses a wrong metric
+
+*File:* `src/radiation/FLD.cpp`, `_fill_FLD_matrix` and `_ComputeRadiationPressureSourceTerm`
+
+Both routines compute the scale factor $h_2$ for the JDIR flux with
+
+```cpp
+#elif GEOMETRY == POLAR
+  h2 = x1(i);   // correct: h_phi = R
+#else
+  h2 = x1(i);   // wrong for CYLINDRICAL: h_z = 1, not R
+#endif
+```
+
+In `CYLINDRICAL` coordinates $(R,\,z)$ the $z$-direction has $h_2 = 1$ (there is no arc-length scale factor in $z$). The fallthrough `#else` branch assigns $h_2 = R$, introducing a spurious $1/R$ weighting in the $z$-diffusion flux and in the flux-limiter gradient. The same incorrect metric was used in the radiation-pressure term. There is no compile-time guard against this geometry.
+
+*Fix:* Reject `CYLINDRICAL` geometry at startup with `IDEFIX_ERROR`.
+
+#pagebreak()

@@ -78,6 +78,11 @@ FluxLimitedDiffusion::FluxLimitedDiffusion(Input& input, DataBlock* datain) {
 void FluxLimitedDiffusion::Init(Input& input, DataBlock* datain) {
   idfx::RegionWrapper region("FluxLimitedDiffusion::Init");
 
+#if GEOMETRY == CYLINDRICAL
+  IDEFIX_ERROR("FLD: CYLINDRICAL geometry is not supported by the radiation module. "
+               "Use CARTESIAN or POLAR.");
+#endif
+
   // Save the parents data objects
   this->data = datain;
 
