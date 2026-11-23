@@ -45,7 +45,9 @@ KOKKOS_INLINE_FUNCTION real RadiationFluxLimiterMinerbo1978(real R) {
 }
 
 KOKKOS_INLINE_FUNCTION real RadiationFluxLimiterLevermorePomraning1981(real R) {
-  real one_over_R = 1.0 / (R + 1e-15);
+  if (R < 0.01)
+    return 1.0/3.0 - R*R/45.0;
+  real one_over_R = 1.0 / R;
   return one_over_R * (1.0 / tanh(R) - one_over_R);
 }
 

@@ -124,3 +124,26 @@ Note: bug 4 happened to conceal the double kick on the gas (the second `update_V
 *Fix:* Remove the redundant `ComputeRadiationPressureSourceTerm` block from `UpdateSurface`.
 
 #pagebreak()
+
+== Bug 7: Levermore–Pomraning limiter diverges at small $R$
+
+*File:* `src/radiation/FLD.cpp`, `RadiationFluxLimiterLevermorePomraning1981`
+
+The limiter is
+
+$
+\lambda(R) = \frac{1}{R}\left(\coth R - \frac{1}{R}\right)
+$
+
+whose correct limit as $R \to 0$ is $\lambda \to 1/3$. The code guarded against division by zero with
+
+```cpp
+real one_over_R = 1.0 / (R + 1e-15);
+return one_over_R * (1.0 / tanh(R) - one_over_R);
+```
+
+For $R \lesssim 10^{-6}$, `1/tanh(R)` and `1/(R+1e-15)` are both $\approx R^{-1}$ and their difference underflows to zero through catastrophic cancellation, leaving $\lambda \approx 0$. For $R \lesssim 10^{-15}$, `1/(R+1e-15)` ≈ $10^{15}$, causing $\lambda \gg 1$. Optically thick interiors routinely fall in this range.
+
+*Fix:* Use the Taylor series $\lambda \approx 1/3 - R^2/45$ for $R < 0.01$.
+
+#pagebreak()
