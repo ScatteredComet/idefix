@@ -357,9 +357,14 @@ void LongCharIrradiation::_ComputeRadiationPressureSourceTerm(real dt, int speci
       data->end[JDIR], data->beg[IDIR], data->end[IDIR],
 
       KOKKOS_LAMBDA(int k, int j, int i) {
-        if (update_Vc)
+        if (update_Vc) {
           Vc(VX1, k, j, i) += heating(species, k, j, i) * dt_over_c;
-        else
-          Uc(VX1, k, j, i) += heating(species, k, j, i) * Vc(RHO, k, j, i) * dt_over_c;
+        } else {
+          real dp = heating(species, k, j, i) * Vc(RHO, k, j, i) * dt_over_c;
+          Uc(VX1, k, j, i) += dp;
+#if HAVE_ENERGY == 1
+          Uc(ENG, k, j, i) += Vc(VX1, k, j, i) * dp;
+#endif
+        }
       });
 }

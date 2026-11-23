@@ -88,3 +88,27 @@ so `Vc` and `Uc` both pointed to the conservative array. The momentum kick was t
 *Fix:* `IdefixArray4D<real> Vc = data->hydro->Vc;`
 
 #pagebreak()
+
+== Bug 5: Radiation-pressure momentum kick missing energy update
+
+*Files:* `src/radiation/FLD.cpp`, `src/radiation/irradiation.cpp`, `src/radiation/short_char.cpp`
+
+All three `_ComputeRadiationPressureSourceTerm` implementations (FLD, long-char, short-char) updated the conservative momentum density $\mathbf{m} = \rho\mathbf{v}$, but never updated the total energy $E = \frac{1}{2}\rho v^2 + e$. The work done by the radiation force on the fluid is
+
+$
+\frac{\partial E}{\partial t} = \mathbf{v} \cdot \mathbf{f}_{\rm rad}
+$
+
+Omitting this means the kinetic energy increase from the momentum kick comes at the expense of the internal energy, which is physically wrong.
+
+*Fix:* After adding momentum kick $\delta\mathbf{m}$, add the work term
+
+```cpp
+Uc(ENG, k, j, i) += Vc(VX1, k, j, i) * dp1
+                  + Vc(VX2, k, j, i) * dp2  // if DIMENSIONS >= 2
+                  + Vc(VX3, k, j, i) * dp3; // if DIMENSIONS == 3
+```
+
+guarded by `#if HAVE_ENERGY == 1`.
+
+#pagebreak()

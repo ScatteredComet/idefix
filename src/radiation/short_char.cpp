@@ -761,10 +761,16 @@ void SphericalShortChar::_ComputeRadiationPressureSourceTerm(real dt, int s, boo
         }
       else {
         EXPAND(
-          Uc(VX1, k, j, i) += -cos(th[j]) * heating(s, k, j, i) * Vc(RHO, k, j, i) * dt_over_c; ,
-          Uc(VX2, k, j, i) += +sin(th[j]) * heating(s, k, j, i) * Vc(RHO, k, j, i) * dt_over_c; ,
+          real dp1 = -cos(th[j]) * heating(s, k, j, i) * Vc(RHO, k, j, i) * dt_over_c;
+          Uc(VX1, k, j, i) += dp1; ,
+          real dp2 = +sin(th[j]) * heating(s, k, j, i) * Vc(RHO, k, j, i) * dt_over_c;
+          Uc(VX2, k, j, i) += dp2; ,
           {}
         )
+#if HAVE_ENERGY == 1
+        Uc(ENG, k, j, i) += EXPAND(Vc(VX1, k, j, i) * dp1,
+                                    + Vc(VX2, k, j, i) * dp2, + 0.);
+#endif
       }
   });
 }
