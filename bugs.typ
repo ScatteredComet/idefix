@@ -25,3 +25,26 @@ tau += (column(s, k, j, i) - dcol(s, k, j, i)) * kappa(s, l);
 ```
 
 #pagebreak()
+
+== Bug 2: Two-temperature FLD coupling coefficient
+
+*File:* `src/radiation/FLD.cpp`, `TwoTemperatureFLD::FillMatrixCouplingTerms`
+
+The FLD equation for the radiation energy density $E$ in the two-temperature scheme is solved implicitly. After eliminating the gas temperature, the diagonal coefficient of the matrix for $E$ is
+
+$
+d_{ii} = 1 + \frac{y}{1 + 4x}
+$
+
+where $y = \kappa_P \rho \, c \, \Delta t$ and $x = a_R T^3 y / (\rho c_V)$. The code had
+
+```cpp
+// Before (wrong):
+diag(k, j, i) = (1 + radY(0, k, j, i)) / (1 + 4 * radX(0, k, j, i));
+// After (correct):
+diag(k, j, i) = 1 + radY(0, k, j, i) / (1 + 4 * radX(0, k, j, i));
+```
+
+The incorrect formula divided both $1$ and $y$ by $(1+4x)$, shifting the diagonal below 1 in the optically thick limit and making the implicit system under-constrained.
+
+#pagebreak()

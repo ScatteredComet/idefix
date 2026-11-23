@@ -1292,7 +1292,7 @@ void TwoTemperatureFLD::FillMatrixCouplingTerms() {
   idefix_for(
       "FiniteDifference", kbeg, kend, jbeg, jend, ibeg, iend, KOKKOS_LAMBDA(int k, int j, int i) {
         // Coupling coefficients and matrix elements
-        diag(k, j, i) = (1 + radY(0, k, j, i)) / (1 + 4 * radX(0, k, j, i));
+        diag(k, j, i) = 1 + radY(0, k, j, i) / (1 + 4 * radX(0, k, j, i));
       });
 }
 
