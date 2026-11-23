@@ -457,7 +457,7 @@ void SphericalShortChar::compute_optical_depths() {
           rho_all(s, k, j, i) = Vc(RHO, k, j, i);
         });
 
-      idefix_for("BoundaryOpacity", kbeg, kend, jbeg, jend,
+      idefix_for("BoundaryOpacity", kbeg, kend, jbeg, jend + 1,
         KOKKOS_LAMBDA(int k, int j) {
             for (int l = 0; l < num_bands; l++) {
               if (s == 0) _tau_boundary(k, j, l) = 0;

@@ -85,3 +85,17 @@ $
 *Fix:* Add an `else` branch that routes the unabsorbed dust irradiation energy into the gas pressure.
 
 #pagebreak()
+
+== Smaller Bug 6: Short-characteristics corner at `jend` has uninitialised boundary optical depth
+
+*File:* `src/radiation/short_char.cpp`, `SphericalShortChar::compute_optical_depths`
+
+The `BoundaryOpacity` kernel initialises `_tau_boundary(k, j, l)` for the JDIR range `[jbeg, jend)` (exclusive end). The cell-corner loop `CornerOpacity` and the ray-ordering logic both run up to and including `j = jend`. In a domain that does not reach the $\theta = \pi$ pole (e.g.~a midplane-symmetric disc covering $\theta \in [0, \pi/2]$), the outer-radial corners at `j = jend` can have ray type `EDGE`, meaning the ray tracing reads
+
+```cpp
+exp_tau(k, j, i, l) = exp(-_tau_boundary(k, j, l));
+```
+
+with `j = jend`. Because `_tau_boundary(k, jend, l)` was never written, it contains uninitialised memory, giving an arbitrary (and non-reproducible) optical depth at the bottom-right corner of the grid.
+
+*Fix:* Extend the `BoundaryOpacity` loop upper bound from `jend` to `jend + 1`.
