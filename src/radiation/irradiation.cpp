@@ -26,7 +26,7 @@
 #include "units.hpp"
 #include "vector.hpp"
 
-Irradiation::Irradiation(Input& input, DataBlock* datain) {
+Irradiation::Irradiation(Input &input, DataBlock *datain) {
   this->data = datain;
   elapsedTime = 0.0;
 
@@ -150,10 +150,10 @@ void Irradiation::UpdatePressure() {
 }
 
 template <typename RadiationGeometry>
-void _ComputeRadiationPressureSourceTerm(DataBlock* data, RadiationGeometry geometry,
+void _ComputeRadiationPressureSourceTerm(DataBlock *data, RadiationGeometry geometry,
                                          real dt_over_c, int species) {}
 
-LongCharIrradiation::LongCharIrradiation(Input& input, DataBlock* datain)
+LongCharIrradiation::LongCharIrradiation(Input &input, DataBlock *datain)
     : Irradiation(input, datain) {
 #if GEOMETRY != SPHERICAL
   std::stringstream msg;
@@ -177,7 +177,7 @@ LongCharIrradiation::LongCharIrradiation(Input& input, DataBlock* datain)
       Kokkos::deep_copy(this->radiation_field, L_host);
 
     } else {
-        if (irrad.compare("userconst") == 0) {
+      if (irrad.compare("userconst") == 0) {
         haveUserRadiationField = true;
         radiationType = OpacityType::userconst;
       } else {
@@ -202,7 +202,7 @@ LongCharIrradiation::LongCharIrradiation(Input& input, DataBlock* datain)
   this->radialSize = 1;
 #if WITH_MPI
   // Set up the radial communicator
-  int remainDims[3] = {true, false, false};  // Keep the radial direction only
+  int remainDims[3] = {true, false, false}; // Keep the radial direction only
   MPI_SAFE_CALL(MPI_Cart_sub(data->mygrid->CartComm, remainDims, &this->RadialComm));
   MPI_SAFE_CALL(MPI_Comm_rank(this->RadialComm, &this->radialRank));
   MPI_SAFE_CALL(MPI_Comm_size(this->RadialComm, &this->radialSize));
@@ -215,7 +215,9 @@ LongCharIrradiation::LongCharIrradiation(Input& input, DataBlock* datain)
 }
 
 LongCharIrradiation::~LongCharIrradiation() {
-  if (column_sum != NULL) delete column_sum;
+  if (column_sum != NULL) {
+    delete column_sum;
+  }
 }
 
 void LongCharIrradiation::ComputeIrradiation() {
@@ -224,15 +226,17 @@ void LongCharIrradiation::ComputeIrradiation() {
   Kokkos::Timer timer;
   elapsedTime -= timer.seconds();
 
-  if (haveUserOpacity) user_opacity(data, kappa);
+  if (haveUserOpacity)
+    user_opacity(data, kappa);
 
-  if (haveUserRadiationField) user_radiation(data, radiation_field);
+  if (haveUserRadiationField)
+    user_radiation(data, radiation_field);
 
   // Start by filling the per-cell column
   IdefixArray4D<real> Vc = data->hydro->Vc;
   IdefixArray1D<real> dx = data->dx[IDIR];
-  IdefixArray1D<real> xl = data->xl[IDIR];
-  IdefixArray3D<real> A = data->A[IDIR];
+  IdefixArray1D<real> x_left = data->xl[IDIR];
+  IdefixArray3D<real> A_left = data->A[IDIR];
   IdefixArray3D<real> dV = data->dV;
 
   int ibeg = data->beg[IDIR];
@@ -242,16 +246,17 @@ void LongCharIrradiation::ComputeIrradiation() {
   int kbeg = data->beg[KDIR];
   int kend = data->end[KDIR];
 
-  IdefixArray4D<real> column = this->column;
+  IdefixArray4D<real> columnDensity = this->column;
   IdefixArray3D<real> boundaryColumn = this->boundaryColumn;
   IdefixArray3D<real> loffset = this->localOffset;
   IdefixArray3D<real> goffset = this->globalOffset;
   int rank = this->radialRank;
 
-  if (haveUserColumnBoundary) UserDefColumnBoundary(data, boundaryColumn);
+  if (haveUserColumnBoundary)
+    UserDefColumnBoundary(data, boundaryColumn);
 
   // RAB: Now uses idefix's column routines
-  IdefixArray4D<real> dcol = IdefixArray4D<real>("dcolumn", num_species, data->np_tot[KDIR],
+  IdefixArray4D<real> dcolumnDensity = IdefixArray4D<real>("dcolumn", num_species, data->np_tot[KDIR],
                                                  data->np_tot[JDIR], data->np_tot[IDIR]);
 
   for (int s = 0; s < num_species; s++) {
@@ -263,58 +268,81 @@ void LongCharIrradiation::ComputeIrradiation() {
 
     idefix_for(
         "ConstructColumn", kbeg, kend, jbeg, jend, ibeg, iend, KOKKOS_LAMBDA(int k, int j, int i) {
-          dcol(s, k, j, i) = Vc(RHO, k, j, i);
+          dcolumnDensity(s, k, j, i) = Vc(RHO, k, j, i);
 
-          if (rank == 0 && i == ibeg) dcol(s, k, j, i) += boundaryColumn(s, k, j);
+          if (rank == 0 && i == ibeg)
+            dcolumnDensity(s, k, j, i) += boundaryColumn(s, k, j);
         });
 
-    column_sum->ComputeColumn(dcol, s);
+    column_sum->ComputeColumn(dcolumnDensity, s);
     IdefixArray3D<real> col_result = column_sum->GetColumn();
 
     idefix_for(
         "SaveColumn", kbeg, kend, jbeg, jend, ibeg, iend, KOKKOS_LAMBDA(int k, int j, int i) {
-          column(s, k, j, i) = col_result(k, j, i);
+          columnDensity(s, k, j, i) = col_result(k, j, i);
 
           // Save the partial column again for later
-          dcol(s, k, j, i) = Vc(RHO, k, j, i) * dV(k, j, i) / (0.5 * (A(k, j, i) + A(k, j, i + 1)));
+          dcolumnDensity(s, k, j, i) = Vc(RHO, k, j, i) * dV(k, j, i) / (0.5 * (A_left(k, j, i) + A_left(k, j, i + 1)));
         });
   }
 
-  int num_bands = this->num_bands;
-  int num_spec = num_species;
+  int num_freq_bands = this->num_bands;
+  int n_species = num_species;
   IdefixArray2D<real> kappa = this->kappa;
-  IdefixArray1D<real> lum = this->radiation_field;
+  IdefixArray1D<real> luminosity = this->radiation_field;
 
   IdefixArray4D<real> heating = this->irradiationHeating;
 
-  real u_lum = this->unit_luminosity;
-  real u_opac = this->unit_opacity;
+  real luminosity_units = this->unit_luminosity;
+  real opacity_units = this->unit_opacity;
 
+  // some things are evaluated at the left cell interface, as that is the one closest to the star
+  // spherical coords are already guarded for above
   idefix_for(
       "ComputeHeating", kbeg, kend, jbeg, jend, ibeg, iend, KOKKOS_LAMBDA(int k, int j, int i) {
-        real solid_angle = 1 / (4 * M_PI * xl(i) * xl(i));
-        real norm = (1 / u_lum) * solid_angle * A(k, j, i) / dV(k, j, i);
+        // zero all heating
+        for (int species = 0; species < n_species; species++) {
+          heating(species, k, j, i) = 0.0;
+        }
 
-        real dl = dV(k, j, i) / (0.5 * (A(k, j, i) + A(k, j, i + 1)));
+        real dlength = dV(k, j, i) / (0.5 * (A_left(k, j, i) + A_left(k, j, i + 1)));
 
-        for (int l = 0; l < num_bands; l++) {
-          real tau = 0, dtau = 1e-300;
-          for (int s = 0; s < num_spec; s++) {
-            tau += column(s, k, j, i) * kappa(s, l);
-            dtau += dcol(s, k, j, i) * kappa(s, l);
+        for (int freq_band = 0; freq_band < num_freq_bands; freq_band++) {
+          real tau_to_star = 0, dtau = std::numeric_limits<real>::min(); // make code independent of precision used. before, if using single precision, 1e-300 would be set to 0 and not prevent nans. WARNING: this might fail to compile via nvcc
+
+          for (int species = 0; species < n_species; species++) {
+            real opacity_in_code_units = kappa(species, freq_band) / opacity_units;
+            dtau += dcolumnDensity(species, k, j, i) * opacity_in_code_units; // i.e. the change of optical depth across this cell
+            tau_to_star += columnDensity(species, k, j, i) * opacity_in_code_units; // i.e. between the left interface and the star WARNING: this is the suspected bug i.e. this assumption is suspected false
           }
 
-          real heat_l = norm * lum(l) * exp(-tau / u_opac) * (-expm1(-dtau / u_opac));
+          // BUG: columnDensity includes this cells opacity. so we need to minus out dtau. the fix is the line below; or you could change columndensity -> columndensity - dcolumndensity in the above
+          tau_to_star -= dtau;
 
-          for (int s = 0; s < num_spec; s++) {
-            if (l == 0) heating(s, k, j, i) = 0;
-            heating(s, k, j, i) += heat_l * (dl * kappa(s, l) / dtau);
+          real luminosity_in_code_units = luminosity(freq_band) / luminosity_units;
+          real flux_left = luminosity_in_code_units / (4 * M_PI * x_left(i) * x_left(i)); // flux as in a power per unit area (since this can sometimes be up to convention!)
+          real power_left = flux_left * A_left(k, j, i);
+          real power_left_per_unit_volume = power_left / dV(k, j , i);
+
+          real attenuation = exp(-tau_to_star);
+          real fraction_absorbed = - expm1(-dtau); // expm1 is (exp  - 1)
+          real absorbed_power_per_unit_volume = power_left_per_unit_volume * attenuation * fraction_absorbed; // absorbed _by this cell_
+
+          for (int species = 0; species < n_species; species++) {
+            real opacity_in_code_units = kappa(species, freq_band) / opacity_units;
+            real dtau_species = dcolumnDensity(species, k, j, i) * opacity_in_code_units;
+            real species_weight = dtau_species / dtau;
+            real species_density = dcolumnDensity(species, k, j, i) / dlength; // column density is per unit area. convert to this cells density per unit volume
+            if (species_density <= 0.0) { continue; }
+            heating(species, k, j, i) += absorbed_power_per_unit_volume * species_weight / species_density; // heatings units are power per unit mass
           }
         }
       });
 
   // Add the heating to the total energy if we don't have FLD.
-  if (!data->haveRadiation) UpdatePressure();
+  if (!data->haveRadiation) {
+    UpdatePressure();
+  }
 
   elapsedTime += timer.seconds();
 }
