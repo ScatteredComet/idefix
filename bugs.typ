@@ -48,3 +48,26 @@ diag(k, j, i) = 1 + radY(0, k, j, i) / (1 + 4 * radX(0, k, j, i));
 The incorrect formula divided both $1$ and $y$ by $(1+4x)$, shifting the diagonal below 1 in the optically thick limit and making the implicit system under-constrained.
 
 #pagebreak()
+
+== Bug 3: Two-temperature FLD irradiation of dust missing density weighting
+
+*File:* `src/radiation/FLD.cpp`, `TwoTemperatureFLD::UpdatePressure`
+
+The irradiation heating rate $S_s$ (per unit mass of species $s$) contributes to the gas temperature update as
+
+$
+\delta T_{\text{gas}} = \frac{\Delta t}{c_V} \sum_s S_s \frac{\rho_s}{\rho_{\text{gas}}}
+$
+
+because the total energy deposited per unit volume in species $s$ is $S_s \rho_s$, which must be divided by $\rho_{\text{gas}} c_V$ to get a gas temperature increment. The code had
+
+```cpp
+// Before (wrong):
+for (int s = 0; s < num_species; s++) num += Sirrad(s, k, j, i) * dt / cV;
+```
+
+which omitted the $\rho_s/\rho_{\text{gas}}$ factor for dust species ($s > 0$), overheating the gas by $1/\epsilon$ where $\epsilon$ is the dust-to-gas ratio. The corresponding `FillUtils` path already contained the correct weighting.
+
+*Fix:* Pre-compute the density-weighted sum before the main kernel and use it in the numerator.
+
+#pagebreak()

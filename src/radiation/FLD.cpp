@@ -1131,6 +1131,31 @@ void TwoTemperatureFLD::UpdatePressure() {
   if (haveIrradiation) Sirrad = data->irradiation->irradiationHeating;
   int num_species = this->num_species;
 
+  // Pre-compute density-weighted irradiation sum: sum_s Sirrad(s)*rho_s/rho_gas * dt/cV
+  IdefixArray3D<real> irrad_sum;
+  if (haveIrradiation) {
+    irrad_sum = IdefixArray3D<real>("irrad_sum", data->np_tot[KDIR], data->np_tot[JDIR],
+                                   data->np_tot[IDIR]);
+    {
+      IdefixArray4D<real> Vc_gas = data->hydro->Vc;
+      idefix_for("IrradGas", 0, data->np_tot[KDIR], 0, data->np_tot[JDIR], 0,
+                 data->np_tot[IDIR], KOKKOS_LAMBDA(int k, int j, int i) {
+                   irrad_sum(k, j, i) = Sirrad(0, k, j, i) * dt / cV;
+                 });
+    }
+    for (int s = 1; s < num_species; s++) {
+      IdefixArray4D<real> Vc_gas = data->hydro->Vc;
+      IdefixArray4D<real> Vc_s = data->dust[s - 1]->Vc;
+      IdefixArray4D<real> Sirrad_loc = Sirrad;
+      idefix_for("IrradDust", 0, data->np_tot[KDIR], 0, data->np_tot[JDIR], 0,
+                 data->np_tot[IDIR], KOKKOS_LAMBDA(int k, int j, int i) {
+                   irrad_sum(k, j, i) +=
+                       Sirrad_loc(s, k, j, i) * Vc_s(RHO, k, j, i) / Vc_gas(RHO, k, j, i) *
+                       dt / cV;
+                 });
+    }
+  }
+
   idefix_for(
       "UpdatePressure", data->beg[KDIR], data->end[KDIR], data->beg[JDIR], data->end[JDIR],
       data->beg[IDIR], data->end[IDIR], KOKKOS_LAMBDA(int k, int j, int i) {
@@ -1141,9 +1166,7 @@ void TwoTemperatureFLD::UpdatePressure() {
         real y = radY(0, k, j, i);
 
         real num = tmp * (1 + 3 * x) + y * Erad(k, j, i) / (rho * cV);
-        if (haveIrradiation) {
-          for (int s = 0; s < num_species; s++) num += Sirrad(s, k, j, i) * dt / cV;
-        }
+        if (haveIrradiation) num += irrad_sum(k, j, i);
         real denom = 1 + 4 * x;
         real newtmp = num / denom;
         Vc(PRS, k, j, i) = newtmp * rho / mu;
