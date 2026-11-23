@@ -144,6 +144,19 @@ void Irradiation::UpdatePressure() {
           KOKKOS_LAMBDA(int k, int j, int i) {
             Vc(TRD, k, j, i) += heating(d, k, j, i) * dt / cV;
           });
+    } else {
+      IdefixArray4D<real> Vc_gas = data->hydro->Vc;
+      IdefixArray4D<real> Vc_dust = data->dust[d - 1]->Vc;
+      const real gamma = data->hydro->eos->GetGamma();
+
+      idefix_for(
+          "DustNoEnergyHeating", data->beg[KDIR], data->end[KDIR], data->beg[JDIR],
+          data->end[JDIR], data->beg[IDIR], data->end[IDIR],
+
+          KOKKOS_LAMBDA(int k, int j, int i) {
+            Vc_gas(PRS, k, j, i) +=
+                heating(d, k, j, i) * Vc_dust(RHO, k, j, i) * dt * (gamma - 1);
+          });
     }
   }
   data->SetBoundaries();

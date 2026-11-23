@@ -69,3 +69,19 @@ In `CYLINDRICAL` coordinates $(R,\,z)$ the $z$-direction has $h_2 = 1$ (there is
 *Fix:* Reject `CYLINDRICAL` geometry at startup with `IDEFIX_ERROR`.
 
 #pagebreak()
+
+== Smaller Bug 5: Dust irradiation without energy equation is silently discarded
+
+*File:* `src/radiation/irradiation.cpp`, `Irradiation::UpdatePressure`
+
+After computing the per-species irradiation heating array $S_s$ (energy per unit time per unit mass of species $s$), `UpdatePressure` applies $S_0$ to the gas pressure and applies $S_d$ ($d > 0$) to the dust tracer temperature only when `have_energy = true`. When dust has no energy equation, the absorbed starlight $S_d \rho_d \Delta t$ was simply dropped — neither stored in the dust nor transferred to the gas.
+
+Physically, the absorbed energy must go somewhere. Without a dust energy variable, the nearest correct choice is to give it to the gas:
+
+$
+\delta P_{\rm gas} = S_d \,\rho_d \,\Delta t \,(\gamma - 1)
+$
+
+*Fix:* Add an `else` branch that routes the unabsorbed dust irradiation energy into the gas pressure.
+
+#pagebreak()
