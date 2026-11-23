@@ -71,3 +71,20 @@ which omitted the $\rho_s/\rho_{\text{gas}}$ factor for dust species ($s > 0$), 
 *Fix:* Pre-compute the density-weighted sum before the main kernel and use it in the numerator.
 
 #pagebreak()
+
+== Bug 4: FLD radiation-pressure `Vc` alias pointed to `Uc`
+
+*File:* `src/radiation/FLD.cpp`, `FluxLimitedDiffusion::_ComputeRadiationPressureSourceTerm`
+
+In the branch that updates primitive variables (`update_Vc = true`), the code had
+
+```cpp
+// Before:
+IdefixArray4D<real> Vc = data->hydro->Uc;  // wrong alias
+```
+
+so `Vc` and `Uc` both pointed to the conservative array. The momentum kick was therefore written into `Uc`, which is then immediately overwritten by the subsequent `PrimToCons` call in the time integrator, silently discarding the radiation-pressure kick on the gas.
+
+*Fix:* `IdefixArray4D<real> Vc = data->hydro->Vc;`
+
+#pagebreak()

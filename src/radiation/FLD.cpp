@@ -991,7 +991,7 @@ void FluxLimitedDiffusion::_ComputeRadiationPressureSourceTerm(real dt, int spec
   real code_c = this->code_c;
   IdefixArray3D<real> nu = this->nu;  // diffusivity
   IdefixArray4D<real> Uc = data->hydro->Uc;
-  IdefixArray4D<real> Vc = data->hydro->Uc;
+  IdefixArray4D<real> Vc = data->hydro->Vc;
   IdefixArray3D<real> Erad = this->Erad;
 
   if (species > 0) {
