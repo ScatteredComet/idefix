@@ -358,9 +358,11 @@ void LongCharIrradiation::_ComputeRadiationPressureSourceTerm(real dt, int speci
 
   IdefixArray4D<real> Uc = data->hydro->Uc;
   IdefixArray4D<real> Vc = data->hydro->Vc;
+  bool hasEnergy = true;
   if (species > 0) {
     Uc = data->dust[species - 1]->Uc;
     Vc = data->dust[species - 1]->Vc;
+    hasEnergy = false;
   }
 
   idefix_for(
@@ -374,7 +376,9 @@ void LongCharIrradiation::_ComputeRadiationPressureSourceTerm(real dt, int speci
           real dp = heating(species, k, j, i) * Vc(RHO, k, j, i) * dt_over_c;
           Uc(VX1, k, j, i) += dp;
 #if HAVE_ENERGY == 1
-          Uc(ENG, k, j, i) += Vc(VX1, k, j, i) * dp;
+          if (hasEnergy) {
+            Uc(ENG, k, j, i) += Vc(VX1, k, j, i) * dp;
+          }
 #endif
         }
       });

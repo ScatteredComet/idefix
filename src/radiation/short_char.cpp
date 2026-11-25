@@ -738,13 +738,16 @@ void SphericalShortChar::_ComputeRadiationPressureSourceTerm(real dt, int s, boo
   IdefixArray1D<double> th = data->x[JDIR];
 
   IdefixArray4D<real> Uc, Vc;
+  bool hasEnergy;
   if (s == 0) {
     Uc = data->hydro->Uc;
     Vc = data->hydro->Vc;
+    hasEnergy = true;
   }
   else {
     Uc = data->dust[s - 1]->Uc;
     Vc = data->dust[s - 1]->Vc;
+    hasEnergy = false;
   }
 
   idefix_for("IrradiationPressureSource",
@@ -768,8 +771,10 @@ void SphericalShortChar::_ComputeRadiationPressureSourceTerm(real dt, int s, boo
           {}
         )
 #if HAVE_ENERGY == 1
-        Uc(ENG, k, j, i) += EXPAND(Vc(VX1, k, j, i) * dp1,
-                                    + Vc(VX2, k, j, i) * dp2, + 0.);
+        if (hasEnergy) {
+          Uc(ENG, k, j, i) += EXPAND(Vc(VX1, k, j, i) * dp1,
+                                      + Vc(VX2, k, j, i) * dp2, + 0.);
+        }
 #endif
       }
   });

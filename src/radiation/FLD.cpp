@@ -1010,9 +1010,11 @@ void FluxLimitedDiffusion::_ComputeRadiationPressureSourceTerm(real dt, int spec
   IdefixArray4D<real> Vc = data->hydro->Vc;
   IdefixArray3D<real> Erad = this->Erad;
 
+  bool hasEnergy = true;
   if (species > 0) {
     Uc = data->dust[species - 1]->Uc;
     Vc = data->dust[species - 1]->Vc;
+    hasEnergy = false;
   }
 
   D_EXPAND(  // dimensions = 0, 1, 2
@@ -1095,12 +1097,14 @@ void FluxLimitedDiffusion::_ComputeRadiationPressureSourceTerm(real dt, int spec
           Uc(VX3, k, j, i) += dt_over_c * (flux3m + flux3p) * Vc(RHO, k, j, i) * kappaR(k, j, i);
         )
 #if HAVE_ENERGY == 1
-        Uc(ENG, k, j, i) += dt_over_c * kappaR(k, j, i) * Vc(RHO, k, j, i) * (
-            D_EXPAND(
-              Vc(VX1, k, j, i) * (flux1m + flux1p),
-              + Vc(VX2, k, j, i) * (flux2m + flux2p),
-              + Vc(VX3, k, j, i) * (flux3m + flux3p)
-            ));
+        if (hasEnergy) {
+          Uc(ENG, k, j, i) += dt_over_c * kappaR(k, j, i) * Vc(RHO, k, j, i) * (
+              D_EXPAND(
+                Vc(VX1, k, j, i) * (flux1m + flux1p),
+                + Vc(VX2, k, j, i) * (flux2m + flux2p),
+                + Vc(VX3, k, j, i) * (flux3m + flux3p)
+              ));
+        }
 #endif
     }
   });
